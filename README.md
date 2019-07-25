@@ -6,7 +6,7 @@ A [Google Photos](http://photos.google.com/) backup tool.
 
 It can be used as a daemon to keep in sync with a google-photos account.
 
-## Specific Changes in this Fork to closer replace Google Drive Sync
+## Specific Changes in this Fork to closer match Google Drive Sync behavior
 
 * Download photos with EXIF data (w/o location because Google strips location).
 * Use filenames from Google Photos to name files.
