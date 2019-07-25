@@ -8,6 +8,12 @@ It can be used as a daemon to keep in sync with a google-photos account.
 
 [![CircleCI](https://circleci.com/gh/dtylman/gitmoo-goog.svg?style=svg)](https://circleci.com/gh/dtylman/gitmoo-goog)
 
+## Specific Changes in this Fork to closer replace Google Drive Sync
+* Download photos with EXIF data (w/o location because Google strips location).
+* Use filenames from Google Photos to name files.
+* Use time stamp from EXIF (date taken) for accessed date and modified date (but not creation date)
+* Name folders by number of month, instead of name, e.g. 2012/07
+
 ## Downloading and Installing:
 
 Download:

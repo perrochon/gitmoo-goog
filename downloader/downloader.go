@@ -7,10 +7,10 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"strconv"
 	"time"
 
@@ -50,6 +50,21 @@ func getFileNameByTime(item *photoslibrary.MediaItem) (string, error) {
 	name := fmt.Sprintf("%v_%v", t.Day(), item.Id[len(item.Id)-8:])
 	return filepath.Join(Options.BackupFolder, year, month, name), nil
 }
+
+func getFileNameFromAPI(item *photoslibrary.MediaItem) (string, error) {
+	t, err := time.Parse(time.RFC3339, item.MediaMetadata.CreationTime)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+	year := strconv.Itoa(t.Year())
+	month := fmt.Sprintf("%02d", int(t.Month()))
+
+	log.Printf("Filename is '%v' ", item.Filename)
+
+	return filepath.Join(Options.BackupFolder, year, month, item.Filename), nil
+}
+
 func getFileNameByHash(item *photoslibrary.MediaItem) string {
 	hasher := md5.New()
 	hasher.Write([]byte(item.Id))
@@ -58,7 +73,7 @@ func getFileNameByHash(item *photoslibrary.MediaItem) string {
 }
 
 func getFileName(item *photoslibrary.MediaItem) string {
-	fileName, err := getFileNameByTime(item)
+	fileName, err := getFileNameFromAPI(item)
 	if err != nil {
 		fileName = getFileNameByHash(item)
 	}
@@ -85,7 +100,7 @@ func createJSON(item *photoslibrary.MediaItem, fileName string) error {
 func createImage(item *photoslibrary.MediaItem, fileName string) error {
 	_, err := os.Stat(fileName)
 	if os.IsNotExist(err) {
-		url := fmt.Sprintf("%v=w%v-h%v", item.BaseUrl, item.MediaMetadata.Width, item.MediaMetadata.Height)
+		url := fmt.Sprintf("%v=d", item.BaseUrl)
 		output, err := os.Create(fileName)
 		if err != nil {
 			return err
@@ -103,6 +118,13 @@ func createImage(item *photoslibrary.MediaItem, fileName string) error {
 			return err
 		}
 
+		t, err := time.Parse(time.RFC3339, item.MediaMetadata.CreationTime)
+        // change both atime and mtime to currenttime
+        err = os.Chtimes(fileName, t, t)
+        if err != nil {
+            fmt.Println(err)
+        }
+
 		log.Printf("Downloaded '%v' (%v)", fileName, humanize.Bytes(uint64(n)))
 		stats.downloaded++
 		stats.totalsize += uint64(n)
@@ -114,11 +136,8 @@ func createImage(item *photoslibrary.MediaItem, fileName string) error {
 func downloadItem(svc *photoslibrary.Service, item *photoslibrary.MediaItem) error {
 	name := getFileName(item)
 	imageName := name
-	jsonName := name + ".json"
-	ext, _ := mime.ExtensionsByType(item.MimeType)
-	if len(ext) > 0 {
-		imageName += ext[0]
-	}
+	trimName := strings.TrimSuffix(name, ".jpg")
+	jsonName := trimName + ".json"
 	err := createJSON(item, jsonName)
 	if err != nil {
 		return err
